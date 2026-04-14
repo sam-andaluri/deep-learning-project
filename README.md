@@ -9,7 +9,22 @@ GitHub repository can be found at `https://github.com/sam-andaluri/deep-learning
 ## Directory Structure
 
 
-## 1. Install `uv`
+## 1. Cloning repo
+
+This repo stores compressed dataset files (`.csv.gz`) with **Git LFS**.
+
+Install `git-lfs` cli using https://git-lfs.com or on MacOS `brew install git-lfs`
+
+Run the following commands to get the datafiles. 
+```bash
+git lfs install
+git clone https://github.com/sam-andaluri/deep-learning-project.git
+cd deep-learning-project
+git lfs pull
+gunzip -k data/azure_llm_2024/*.gz
+```
+
+## 2. Install `uv`
 
 Install `uv` with the standalone installer:
 
@@ -29,7 +44,7 @@ Confirm the installation:
 uv --version
 ```
 
-## 2. Prerequisites
+## 3. Prerequisites
 
 Make sure the following tools are available on your system:
 
@@ -45,7 +60,7 @@ python -m jupyter nbconvert --version
 pandoc --version
 ```
 
-## 3. Create and Activate a Virtual Environment
+## 4. Create and Activate a Virtual Environment
 
 From the project folder:
 
@@ -55,29 +70,12 @@ uv venv .venv
 source .venv/bin/activate
 ```
 
-## 4. Install Dependencies
+## 5. Install Dependencies
 
 Install the pinned dependencies from `requirements.txt`:
 
 ```bash
 uv pip install -r requirements.txt
-```
-
-## 5. Download the Dataset
-
-Download the Azure LLM Inference Trace 2024 dataset:
-
-```bash
-mkdir -p data/azure_llm_2024
-cd data/azure_llm_2024
-
-# Code service trace (~660 MB)
-curl -O https://azurepublicdatasettraces.blob.core.windows.net/azurellminfererencetrace/AzureLLMInferenceTrace_code_1week.csv
-
-# Conversation service trace (~1.1 GB)
-curl -O https://azurepublicdatasettraces.blob.core.windows.net/azurellminfererencetrace/AzureLLMInferenceTrace_conv_1week.csv
-
-cd ../..
 ```
 
 ## 6. Run the Notebook
