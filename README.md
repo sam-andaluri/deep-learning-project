@@ -2,12 +2,9 @@
 
 ## Time-Series Demand Forecasting for LLM Inference Serving
 
-This folder contains implementation of **Multi-Step Demand Forecasting using LSTM and Transformer Architectures** built on Microsoft's Azure LLM Inference Trace 2024 dataset (Stojkovic et al., HPCA '25).
+This repository contains a notebook-based analysis of multi-step demand forecasting for LLM inference workloads using the Azure LLM Inference Trace 2024 dataset. The project compares LSTM and Transformer models against simpler statistical baselines and includes saved figures, trained model artifacts, and a written report.
 
-GitHub repository can be found at `https://github.com/sam-andaluri/deep-learning-project`.
-
-## Directory Structure
-
+GitHub repository: `https://github.com/sam-andaluri/deep-learning-project`
 
 ## 1. Cloning repo
 
