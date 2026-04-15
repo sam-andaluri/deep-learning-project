@@ -2,21 +2,27 @@
 
 ## Time-Series Demand Forecasting for LLM Inference Serving
 
+**Project**: Deep Learning Systems
+
+**Date**: April 2026
+
+**Author**: Sambasiva Andaluri
+
 ## Report Overview
 
-This project addresses the challenge of predictive autoscaling for Large Language Model (LLM) inference services by developing deep learning models for multi-step demand forecasting. Using the Azure LLM Inference Trace 2024 dataset—production traces from Microsoft Azure's code generation and conversation services—we built and compared LSTM Encoder-Decoder and Transformer architectures for predicting request arrival rates up to 60 minutes into the future. The models enable proactive resource provisioning, reducing cold-start latency and improving service reliability.
+This project studies predictive demand forecasting for Large Language Model (LLM) inference services using deep learning methods. Using the Azure LLM Inference Trace 2024 dataset, which contains production traces from Microsoft Azure's code generation and conversation services, we built and compared LSTM encoder-decoder and Transformer architectures for predicting request arrival rates up to 60 minutes into the future. The goal is to evaluate how well these models capture short-term demand variation and whether they offer meaningful improvement over simpler baselines.
 
 ## Dataset and Task Description
 
 ### Dataset: Azure LLM Inference Trace 2024
 
-The dataset contains production traces from two LLM inference services operating on Microsoft Azure infrastructure, collected May 10-19, 2024. Published with the HPCA '25 paper "DynamoLLM: Designing LLM Inference Clusters for Performance and Energy Efficiency" by Stojkovic et al. (2025).
+The dataset contains production traces from two LLM inference services operating on Microsoft Azure infrastructure over approximately one week in May 2024. The traces were published with the HPCA '25 paper "DynamoLLM: Designing LLM Inference Clusters for Performance and Energy Efficiency" by Stojkovic et al. (2025).
 
 **Data Summary:**
 | Service | Total Requests | Duration | Avg Requests/5min |
 |---------|---------------|----------|-------------------|
-| Code Generation | ~16.8 million | 7 days | ~5,800 |
-| Conversation | ~27.3 million | 7 days | ~9,500 |
+| Code Generation | ~16.8 million | ~1 week | ~5,800 |
+| Conversation | ~27.3 million | ~1 week | ~9,500 |
 
 **Schema:**
 - `TIMESTAMP`: Request arrival time (datetime)
@@ -34,10 +40,7 @@ The dataset contains production traces from two LLM inference services operating
 - Features: request_count, mean_context_tokens, mean_generated_tokens
 
 **Why This Matters:**
-LLM inference is computationally expensive and demand-sensitive. GPU resources require minutes to provision, so reactive scaling causes SLA violations during demand spikes. Predictive demand forecasting enables:
-1. Pre-provisioning GPUs before demand spikes
-2. Reducing cold-start latency by 80-90%
-3. Improving infrastructure utilization through proactive capacity planning
+LLM inference is computationally intensive and highly sensitive to changes in request volume. Forecasting short-term demand can support capacity planning, help characterize recurring traffic structure, and provide a basis for evaluating predictive scaling strategies in a controlled setting.
 
 ## Model Architecture and Design Decisions
 
@@ -198,30 +201,30 @@ This comparison tests whether attention-based parallelism improves forecasting o
 
 **Predictive Autoscaling Performance (90th Percentile Threshold):**
 
-| Metric | Value | Interpretation |
-|--------|-------|----------------|
-| Precision | ~75-85% | 75-85% of predicted spikes were real |
-| Recall | ~70-80% | 70-80% of actual spikes were predicted |
-| Lead Time | 15-25 min | Advance warning before spike |
-| False Alarm Rate | ~5-10% | ~15-30 unnecessary scale-ups/day |
+| Metric | LSTM | Transformer |
+|--------|------|-------------|
+| Precision | 1.000 | 0.912 |
+| Recall | 0.694 | 0.861 |
+| F1 Score | 0.820 | 0.886 |
+| False Alarm Rate | 0.000 | 0.013 |
+| Avg Advance Warning (min) | 0.625 | 0.926 |
 
-The 15-25 minute lead time exceeds typical GPU provisioning latency (5-10 minutes), making the forecaster operationally useful.
+These results show that both models can identify high-demand periods under the threshold-based simulation, with the Transformer providing the better balance of precision and recall. However, the average advance warning is less than one minute for both models. The experiment is therefore most useful as a comparative evaluation of forecast-informed thresholding rather than evidence of deployment-ready autoscaling performance.
 
 ### Cross-Service Transfer
 
-| Training | Testing | R² | Degradation |
-|----------|---------|-----|-------------|
-| Code | Code | 0.962 | (baseline) |
-| Code | Conversation | ~0.85-0.90 | Significant |
-| Conversation | Code | ~0.88-0.92 | Moderate |
+| Training | Testing | MAE | R² | Interpretation |
+|----------|---------|-----|-----|----------------|
+| Code | Code | 1,050 | 0.962 | In-domain baseline |
+| Code | Conversation | 2,202 | -1.743 | Severe degradation |
 
-Transfer learning shows limited generalization due to different traffic characteristics (Code is bursty, Conversation is steady). Service-specific models are recommended.
+For the LSTM, Code-to-Conversation transfer also performed poorly (MAE 2,131; R² -1.958). These results indicate that models trained on the Code service do not generalize well to the Conversation service without adaptation. The evidence in this project therefore supports service-specific modeling rather than direct cross-service reuse.
 
 ## Limitations and Risks
 
 ### Dataset Limitations
 - **Single infrastructure:** Results may not generalize to non-Azure deployments
-- **7-day window:** May not capture weekly or monthly patterns
+- **Trace duration:** The analysis uses approximately one week of data and may not capture longer-term weekly or monthly structure
 - **No external features:** Excludes events, holidays, or promotional periods that drive demand
 
 ### Architecture Limitations
@@ -230,8 +233,8 @@ Transfer learning shows limited generalization due to different traffic characte
 - **No uncertainty quantification:** Point predictions without confidence intervals
 
 ### Operational Risks
-- **False positives:** ~5-10% false alarm rate means unnecessary scale-ups and wasted resources
-- **False negatives:** Missing 20-30% of spikes causes SLA violations
+- **False positives:** Threshold-triggered decisions can still produce unnecessary scale-up actions
+- **False negatives:** Missed spikes remain possible, particularly under abrupt demand changes
 - **Distribution shift:** Model performance degrades if traffic patterns change over time
 
 ### Potential Failure Cases
@@ -242,7 +245,7 @@ Transfer learning shows limited generalization due to different traffic characte
 ## Ethical and Responsible Use
 
 ### Energy Consumption
-Deep learning training requires significant compute resources. This project's models are small (~50K parameters each), but production deployment at scale multiplies energy impact. Carbon-aware scheduling should be considered.
+Deep learning training requires compute resources, although the models used here are modest in size relative to many modern sequence models. In this project, the LSTM has 101,441 parameters and the Transformer has 67,980 parameters. If similar models were deployed at scale or retrained frequently, the cumulative energy cost would still warrant attention. Carbon-aware scheduling and efficient retraining policies would therefore be sensible considerations.
 
 ### Bias Considerations
 The Azure dataset reflects usage patterns of a specific user population (primarily developers and enterprise users). Models trained on this data may not accurately forecast demand from different demographics or regions.
@@ -276,12 +279,16 @@ Accurate demand forecasting could be misused for:
 
 ### Connection to Synthesis
 
-This demand forecaster feeds into the broader AI-driven infrastructure management system:
-- **Orchestration agent** uses predictions to schedule preemptive scale-ups
-- **Cost optimizer** balances prediction confidence against provisioning costs
-- **SLA manager** adjusts thresholds based on historical prediction accuracy
+This demand forecaster can be viewed as one component of a broader infrastructure management workflow:
+- **Orchestration logic** could use forecasts to inform capacity adjustments
+- **Cost-aware policies** could weigh forecast confidence against provisioning cost
+- **Service-level monitoring** could be used to recalibrate thresholds over time
 
 ## Conclusion
+
+### Interpretation for a Non-Technical Audience
+
+For a non-technical reader, the project asks a simple question: can we estimate how busy an AI service will be in the next hour by looking at its recent traffic? If the answer is yes, operators could prepare computing resources earlier instead of reacting only after demand spikes occur. In this study, the Transformer model produced the strongest overall results, but the improvement over a simpler Linear Regression baseline was modest. The main practical takeaway is that short-term demand in these traces is predictable, but careful baseline comparisons are essential because simpler models already capture much of the useful signal.
 
 ### On Model Complexity vs. Accuracy
 
@@ -294,7 +301,7 @@ Deep learning's value in this context lies not in dramatic accuracy gains but in
 
 ### Practical Recommendation
 
-For practitioners facing similar forecasting tasks, this comparison demonstrates the importance of establishing strong baselines before adopting complex models. In this case, Linear Regression with lag features offers 96% of Transformer's accuracy at a fraction of the complexity. Deep learning becomes preferable when operating at scale (where small improvements compound), when existing GPU infrastructure reduces deployment overhead, or when the forecasting task involves more complex patterns than those present in this dataset.
+For this dataset, the main takeaway is that strong baselines are essential. Linear Regression performs competitively, and the Transformer provides a modest improvement in accuracy with acceptable training cost. If the goal is an exploratory forecasting study or a controlled model comparison, the Transformer is the strongest model evaluated here. If the goal is operational deployment, additional validation would be needed, including recalibration over time, uncertainty estimation, and a backtest tied to explicit provisioning objectives.
 
 ### Role of Feature Engineering
 
@@ -313,4 +320,3 @@ Stojkovic, U., et al. (2025). DynamoLLM: Designing LLM Inference Clusters for Pe
 Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning with neural networks. *Advances in Neural Information Processing Systems*, 27.
 
 Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. *Advances in Neural Information Processing Systems*, 30.
-
